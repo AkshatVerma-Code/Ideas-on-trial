@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS questions (
 -- Options table
 CREATE TABLE IF NOT EXISTS options (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE RESTRICT,
   text TEXT NOT NULL,
   weight INTEGER NOT NULL DEFAULT 1 CHECK (weight >= 1 AND weight <= 10),
   display_order INTEGER NOT NULL DEFAULT 0,
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS participants (
 CREATE TABLE IF NOT EXISTS answers (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   participant_id UUID NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
-  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE RESTRICT,
   option_id UUID REFERENCES options(id) ON DELETE SET NULL,
   score INTEGER NOT NULL DEFAULT 0,
   time_taken_seconds INTEGER, -- how long they took to answer
@@ -100,15 +100,22 @@ CREATE POLICY "Public read options" ON options FOR SELECT USING (true);
 CREATE POLICY "Public insert participants" ON participants FOR INSERT WITH CHECK (true);
 
 -- Participants can read their own record (by session_token)
-CREATE POLICY "Participants read own" ON participants FOR SELECT USING (true);
+CREATE POLICY "Participants read own" ON participants FOR SELECT
+  USING (session_token = current_setting('request.jwt.claims', true)::jsonb->>'session_token');
 
 -- Participants can update their own record
-CREATE POLICY "Participants update own" ON participants FOR UPDATE USING (true);
+CREATE POLICY "Participants update own" ON participants FOR UPDATE
+  USING (session_token = current_setting('request.jwt.claims', true)::jsonb->>'session_token');
 
 -- Participants can insert answers
 CREATE POLICY "Public insert answers" ON answers FOR INSERT WITH CHECK (true);
 
 -- Participants can read their own answers
-CREATE POLICY "Public read answers" ON answers FOR SELECT USING (true);
+CREATE POLICY "Participants read own answers" ON answers FOR SELECT
+  USING (participant_id = (
+    SELECT id FROM participants
+    WHERE session_token = current_setting('request.jwt.claims', true)::jsonb->>'session_token'
+    LIMIT 1
+  ));
 
 -- Service role (admin) can do everything - handled by service role key in API routes

@@ -1,8 +1,10 @@
 import { SignJWT, jwtVerify } from 'jose'
 
-const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'fallback-secret-change-in-production'
-)
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'fallback-secret-change-in-production') {
+  throw new Error('JWT_SECRET must be set to a strong random string (at least 32 chars)')
+}
+
+const secret = new TextEncoder().encode(process.env.JWT_SECRET!)
 
 export async function signAdminToken(): Promise<string> {
   return await new SignJWT({ role: 'admin' })

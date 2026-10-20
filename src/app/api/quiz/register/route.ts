@@ -3,6 +3,18 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 import { signParticipantToken } from '@/lib/auth'
 import { v4 as uuidv4 } from 'uuid'
 
+function sanitize(input: string): string {
+  return input
+    .replace(/[<>'"&]/g, c => ({
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '&': '&amp;',
+    }[c] ?? c))
+    .trim()
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { teamName } = await req.json()
@@ -11,7 +23,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Team name is required.' }, { status: 400 })
     }
 
-    const trimmed = teamName.trim()
+    const trimmed = sanitize(teamName)
     if (trimmed.length < 2) {
       return NextResponse.json({ error: 'Team name must be at least 2 characters.' }, { status: 400 })
     }

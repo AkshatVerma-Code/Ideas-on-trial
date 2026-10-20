@@ -80,34 +80,32 @@ export default function QuizPage() {
   // Reset timer when question changes
   useEffect(() => {
     if (!currentQuestion || answered[currentQuestion.id]) return
-    setTimeLeft(currentQuestion.timer_seconds)
     setTimerStarted(true)
     setStartTime(Date.now())
     setSelectedOption(null)
     setAutoSubmitted(false)
   }, [currentIndex, currentQuestion])
 
-  // Timer countdown
+  // Timer countdown (timestamp-based, so tab switches don't pause it)
   useEffect(() => {
     if (!timerStarted || !currentQuestion || answered[currentQuestion.id]) return
 
-    if (timeLeft <= 0) {
-      if (!autoSubmitted) {
-        setAutoSubmitted(true)
-        handleSubmit(null) // auto-submit with no answer on timeout
-      }
-      return
-    }
-
     const timer = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 1) { clearInterval(timer); return 0 }
-        return t - 1
-      })
+      const elapsed = Math.floor((Date.now() - startTime) / 1000)
+      const remaining = Math.max(currentQuestion.timer_seconds - elapsed, 0)
+      setTimeLeft(remaining)
+
+      if (remaining <= 0) {
+        clearInterval(timer)
+        if (!autoSubmitted) {
+          setAutoSubmitted(true)
+          handleSubmit(null) // auto-submit with no answer on timeout
+        }
+      }
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [timerStarted, timeLeft, currentQuestion, answered, autoSubmitted])
+  }, [timerStarted, currentQuestion, startTime, answered, autoSubmitted])
 
   const handleSubmit = useCallback(async (optionId: string | null) => {
     if (!currentQuestion || submitting) return

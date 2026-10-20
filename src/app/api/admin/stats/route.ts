@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
       { data: topScorersRaw },
       { count: questionCount },
       { data: settingsRaw },
+      { data: answersRaw },
     ] = await Promise.all([
       supabaseAdmin.from('participants').select('id', { count: 'exact', head: true }),
       supabaseAdmin.from('participants').select('id', { count: 'exact', head: true }).not('completed_at', 'is', null),
@@ -42,6 +43,7 @@ export async function GET(req: NextRequest) {
         .limit(5),
       supabaseAdmin.from('questions').select('id', { count: 'exact', head: true }),
       supabaseAdmin.from('settings').select('key, value'),
+      supabaseAdmin.from('answers').select('time_taken_seconds').not('time_taken_seconds', 'is', null),
     ])
 
     const settingsRows = (settingsRaw ?? []) as { key: string; value: string }[]
@@ -49,6 +51,11 @@ export async function GET(req: NextRequest) {
     settingsRows.forEach(s => { settingsMap[s.key] = s.value })
 
     const topScorers = (topScorersRaw ?? []) as { team_name: string; total_score: number }[]
+
+    const answers = (answersRaw ?? []) as { time_taken_seconds: number }[]
+    const avgTime = answers.length > 0
+      ? Math.round(answers.reduce((sum, a) => sum + (a.time_taken_seconds || 0), 0) / answers.length)
+      : 0
 
     return NextResponse.json({
       totalParticipants: totalParticipants || 0,
@@ -58,6 +65,7 @@ export async function GET(req: NextRequest) {
       topScorers,
       quizOpen: settingsMap['quiz_open'] === 'true',
       quizTitle: settingsMap['quiz_title'] || 'Ideas on Trial',
+      avgTimeSeconds: avgTime,
     })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Database query error'

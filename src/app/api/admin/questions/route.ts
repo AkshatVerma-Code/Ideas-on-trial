@@ -7,6 +7,28 @@ async function checkAdmin(req: NextRequest) {
   return token ? await verifyAdminToken(token) : false
 }
 
+function sanitize(input: string): string {
+  return input
+    .replace(/[<>'"&]/g, c => ({
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '&': '&amp;',
+    }[c] ?? c))
+    .trim()
+}
+
+function csrfSafe(req: NextRequest): boolean {
+  const origin = req.headers.get('origin')
+  const referer = req.headers.get('referer')
+  const host = req.headers.get('host')
+  if (!host) return false
+  if (origin && !origin.includes(host)) return false
+  if (referer && !referer.includes(`https://${host}`) && !referer.includes(`http://${host}`)) return false
+  return true
+}
+
 type RawOption = { id: string; text: string; weight: number; display_order: number; question_id: string }
 type RawQuestion = { id: string; text: string; timer_seconds: number; display_order: number; created_at: string; options: RawOption[] }
 
@@ -47,6 +69,7 @@ export async function GET(req: NextRequest) {
 // POST /api/admin/questions - create a question
 export async function POST(req: NextRequest) {
   if (!(await checkAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!csrfSafe(req)) return NextResponse.json({ error: 'CSRF check failed.' }, { status: 403 })
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Please configure your Supabase URL and keys in .env.local first.' }, { status: 503 })
@@ -62,7 +85,7 @@ export async function POST(req: NextRequest) {
     const { data: questionRaw, error: qErr } = await supabaseAdmin
       .from('questions')
       .insert([{
-        text: text.trim(),
+        text: sanitize(text),
         timer_seconds: timer_seconds || 30,
         display_order: display_order ?? 0,
       }] as never[])
@@ -75,7 +98,7 @@ export async function POST(req: NextRequest) {
 
     const optionsToInsert = options.map((o: { text: string; weight: number }, idx: number) => ({
       question_id: question.id,
-      text: o.text.trim(),
+      text: sanitize(o.text),
       weight: o.weight || 1,
       display_order: idx,
     }))
@@ -93,6 +116,7 @@ export async function POST(req: NextRequest) {
 // PUT /api/admin/questions - update a question
 export async function PUT(req: NextRequest) {
   if (!(await checkAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!csrfSafe(req)) return NextResponse.json({ error: 'CSRF check failed.' }, { status: 403 })
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Please configure your Supabase URL and keys in .env.local first.' }, { status: 503 })
@@ -106,42 +130,19 @@ export async function PUT(req: NextRequest) {
 
     await supabaseAdmin
       .from('questions')
-      .update({ text: text.trim(), timer_seconds, display_order } as never)
+      .update({ text: sanitize(text), timer_seconds, display_order } as never)
       .eq('id', id)
 
     if (options) {
       await supabaseAdmin.from('options').delete().eq('question_id', id)
       const optionsToInsert = options.map((o: { text: string; weight: number }, idx: number) => ({
         question_id: id,
-        text: o.text.trim(),
+        text: sanitize(o.text),
         weight: o.weight || 1,
         display_order: idx,
       }))
       await supabaseAdmin.from('options').insert(optionsToInsert as never[])
     }
-
-    return NextResponse.json({ success: true })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Server error'
-    return NextResponse.json({ error: msg }, { status: 500 })
-  }
-}
-
-// DELETE /api/admin/questions?id=xxx
-export async function DELETE(req: NextRequest) {
-  if (!(await checkAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: 'Please configure your Supabase URL and keys in .env.local first.' }, { status: 503 })
-  }
-
-  try {
-    const { searchParams } = new URL(req.url)
-    const id = searchParams.get('id')
-    if (!id) return NextResponse.json({ error: 'ID required.' }, { status: 400 })
-
-    const { error } = await supabaseAdmin.from('questions').delete().eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     return NextResponse.json({ success: true })
   } catch (err: unknown) {

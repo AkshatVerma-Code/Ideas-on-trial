@@ -12,6 +12,8 @@ interface Participant {
   completed_at: string | null
   total_score: number
   ip_address: string | null
+  avgTimeSeconds: number
+  totalTimeSeconds: number
 }
 
 export default function ParticipantsPage() {
@@ -61,18 +63,19 @@ export default function ParticipantsPage() {
   const inProgress = participants.filter(p => !p.completed_at)
 
   const downloadCSV = () => {
-    const rows = [
-      ['Rank', 'Team Name', 'Score', 'Status', 'Started At', 'Completed At', 'IP'],
-      ...filtered.map((p, i) => [
-        String(i + 1),
-        p.team_name,
-        String(p.total_score),
-        p.completed_at ? 'Completed' : 'In Progress',
-        new Date(p.started_at).toLocaleString(),
-        p.completed_at ? new Date(p.completed_at).toLocaleString() : '-',
-        p.ip_address || '-',
-      ])
-    ]
+      const rows = [
+        ['Rank', 'Team Name', 'Score', 'Status', 'Started At', 'Completed At', 'Avg Time/Q (s)', 'IP'],
+        ...filtered.map((p, i) => [
+          String(i + 1),
+          p.team_name,
+          String(p.total_score),
+          p.completed_at ? 'Completed' : 'In Progress',
+          new Date(p.started_at).toLocaleString(),
+          p.completed_at ? new Date(p.completed_at).toLocaleString() : '-',
+          String(p.avgTimeSeconds || 0),
+          p.ip_address || '-',
+        ])
+      ]
     const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
@@ -166,6 +169,7 @@ export default function ParticipantsPage() {
             <div className="col-span-2 cursor-pointer flex items-center gap-1 hover:text-gray-300 hidden sm:flex" onClick={() => toggleSort('time')}>
               Started <SortIcon field="time" />
             </div>
+            <div className="col-span-2 hidden sm:block">Avg Time/Q</div>
             <div className="col-span-1" />
           </div>
 
@@ -219,6 +223,9 @@ export default function ParticipantsPage() {
                   <div className="col-span-2 hidden sm:block">
                     <p className="text-gray-500 text-xs">{new Date(p.started_at).toLocaleTimeString()}</p>
                     <p className="text-gray-600 text-xs">{new Date(p.started_at).toLocaleDateString()}</p>
+                  </div>
+                  <div className="col-span-2 hidden sm:block">
+                    <p className="text-gray-500 text-xs">{p.avgTimeSeconds || 0}s</p>
                   </div>
                   <div className="col-span-1 flex justify-end">
                     <button
