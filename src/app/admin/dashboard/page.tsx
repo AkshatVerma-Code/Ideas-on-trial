@@ -10,7 +10,7 @@ interface Stats {
   completedParticipants: number
   inProgressParticipants: number
   totalQuestions: number
-  avgTimeSeconds: number
+  avgCompletionSeconds: number
   topScorers: { team_name: string; total_score: number }[]
   quizOpen: boolean
   quizTitle: string
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
     { label: 'Completed', value: stats.completedParticipants, icon: Trophy, color: 'text-green-400', bg: 'bg-green-500/10' },
     { label: 'In Progress', value: stats.inProgressParticipants, icon: Activity, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
     { label: 'Questions', value: stats.totalQuestions, icon: HelpCircle, color: 'text-purple-400', bg: 'bg-purple-500/10' },
-    { label: 'Avg Time/Q', value: `${stats.avgTimeSeconds}s`, icon: Clock, color: 'text-orange-400', bg: 'bg-orange-500/10' },
+    { label: 'Avg Completion', value: `${stats.avgCompletionSeconds}s`, icon: Clock, color: 'text-orange-400', bg: 'bg-orange-500/10' },
   ] : []
 
   return (

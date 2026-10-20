@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       { data: topScorersRaw },
       { count: questionCount },
       { data: settingsRaw },
-      { data: answersRaw },
+      { data: participantsTimingRaw },
     ] = await Promise.all([
       supabaseAdmin.from('participants').select('id', { count: 'exact', head: true }),
       supabaseAdmin.from('participants').select('id', { count: 'exact', head: true }).not('completed_at', 'is', null),
@@ -43,7 +43,9 @@ export async function GET(req: NextRequest) {
         .limit(5),
       supabaseAdmin.from('questions').select('id', { count: 'exact', head: true }),
       supabaseAdmin.from('settings').select('key, value'),
-      supabaseAdmin.from('answers').select('time_taken_seconds').not('time_taken_seconds', 'is', null),
+      supabaseAdmin.from('participants')
+        .select('started_at, completed_at')
+        .not('completed_at', 'is', null),
     ])
 
     const settingsRows = (settingsRaw ?? []) as { key: string; value: string }[]
@@ -52,20 +54,26 @@ export async function GET(req: NextRequest) {
 
     const topScorers = (topScorersRaw ?? []) as { team_name: string; total_score: number }[]
 
-    const answers = (answersRaw ?? []) as { time_taken_seconds: number }[]
-    const avgTime = answers.length > 0
-      ? Math.round(answers.reduce((sum, a) => sum + (a.time_taken_seconds || 0), 0) / answers.length)
+    const timingRows = (participantsTimingRaw ?? []) as { started_at: string; completed_at: string }[]
+    const durations = timingRows.map(t => {
+      const start = new Date(t.started_at).getTime()
+      const end = new Date(t.completed_at).getTime()
+      return end - start
+    })
+    const avgCompletionMs = durations.length > 0
+      ? durations.reduce((sum, d) => sum + d, 0) / durations.length
       : 0
+    const avgCompletionSeconds = Math.round(avgCompletionMs / 1000)
 
     return NextResponse.json({
       totalParticipants: totalParticipants || 0,
       completedParticipants: completedParticipants || 0,
       inProgressParticipants: (totalParticipants || 0) - (completedParticipants || 0),
       totalQuestions: questionCount || 0,
+      avgCompletionSeconds,
       topScorers,
       quizOpen: settingsMap['quiz_open'] === 'true',
       quizTitle: settingsMap['quiz_title'] || 'Ideas on Trial',
-      avgTimeSeconds: avgTime,
     })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Database query error'

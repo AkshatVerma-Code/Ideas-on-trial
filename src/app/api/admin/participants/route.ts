@@ -33,26 +33,15 @@ export async function GET(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message, participants: [] }, { status: 500 })
 
-    // Get average time per question per participant from answers
-    const { data: answersRaw } = await supabaseAdmin
-      .from('answers')
-      .select('participant_id, time_taken_seconds')
-      .not('time_taken_seconds', 'is', null)
-
-    const answers = (answersRaw ?? []) as { participant_id: string; time_taken_seconds: number }[]
-    const timeMap: Record<string, { sum: number; count: number }> = {}
-    answers.forEach(a => {
-      if (!timeMap[a.participant_id]) timeMap[a.participant_id] = { sum: 0, count: 0 }
-      timeMap[a.participant_id].sum += a.time_taken_seconds || 0
-      timeMap[a.participant_id].count += 1
-    })
-
+    // Get completion time per participant from started_at to completed_at
     const participantsWithTime = ((participants ?? []) as { id: string; team_name: string; started_at: string; completed_at: string | null; total_score: number; ip_address: string | null }[]).map(p => {
-      const t = timeMap[p.id]
+      let completionSeconds = 0
+      if (p.completed_at && p.started_at) {
+        completionSeconds = Math.round((new Date(p.completed_at).getTime() - new Date(p.started_at).getTime()) / 1000)
+      }
       return {
         ...p,
-        avgTimeSeconds: t ? Math.round(t.sum / t.count) : 0,
-        totalTimeSeconds: t ? t.sum : 0,
+        completionSeconds,
       }
     })
 

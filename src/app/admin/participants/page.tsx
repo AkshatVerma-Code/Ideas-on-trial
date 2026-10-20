@@ -12,8 +12,7 @@ interface Participant {
   completed_at: string | null
   total_score: number
   ip_address: string | null
-  avgTimeSeconds: number
-  totalTimeSeconds: number
+  completionSeconds: number
 }
 
 export default function ParticipantsPage() {
@@ -64,7 +63,7 @@ export default function ParticipantsPage() {
 
   const downloadCSV = () => {
       const rows = [
-        ['Rank', 'Team Name', 'Score', 'Status', 'Started At', 'Completed At', 'Avg Time/Q (s)', 'IP'],
+        ['Rank', 'Team Name', 'Score', 'Status', 'Started At', 'Completed At', 'Completion Time (s)', 'IP'],
         ...filtered.map((p, i) => [
           String(i + 1),
           p.team_name,
@@ -72,7 +71,7 @@ export default function ParticipantsPage() {
           p.completed_at ? 'Completed' : 'In Progress',
           new Date(p.started_at).toLocaleString(),
           p.completed_at ? new Date(p.completed_at).toLocaleString() : '-',
-          String(p.avgTimeSeconds || 0),
+          String(p.completionSeconds || 0),
           p.ip_address || '-',
         ])
       ]
@@ -169,7 +168,7 @@ export default function ParticipantsPage() {
             <div className="col-span-2 cursor-pointer flex items-center gap-1 hover:text-gray-300 hidden sm:flex" onClick={() => toggleSort('time')}>
               Started <SortIcon field="time" />
             </div>
-            <div className="col-span-2 hidden sm:block">Avg Time/Q</div>
+            <div className="col-span-2 hidden sm:block">Completion Time</div>
             <div className="col-span-1" />
           </div>
 
@@ -225,7 +224,7 @@ export default function ParticipantsPage() {
                     <p className="text-gray-600 text-xs">{new Date(p.started_at).toLocaleDateString()}</p>
                   </div>
                   <div className="col-span-2 hidden sm:block">
-                    <p className="text-gray-500 text-xs">{p.avgTimeSeconds || 0}s</p>
+                    <p className="text-gray-500 text-xs">{p.completionSeconds || 0}s</p>
                   </div>
                   <div className="col-span-1 flex justify-end">
                     <button

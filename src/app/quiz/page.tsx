@@ -326,20 +326,13 @@ export default function QuizPage() {
                 </div>
               </div>
 
-              {/* Confirm / skip */}
+              {/* Confirm */}
               {!isAnswered && (
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleSubmit(null)}
-                    disabled={submitting}
-                    className="flex-1 py-3 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 text-sm transition-all disabled:opacity-40"
-                  >
-                    Skip Question
-                  </button>
+                <div className="flex justify-center">
                   <button
                     onClick={handleConfirm}
                     disabled={!selectedOption || submitting}
-                    className="flex-[2] py-3 rounded-xl bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold text-sm flex items-center justify-center gap-2 transition-all"
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold text-sm flex items-center justify-center gap-2 transition-all"
                   >
                     {submitting ? (
                       <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
