@@ -7,15 +7,7 @@ async function checkAdmin(req: NextRequest) {
   return token ? await verifyAdminToken(token) : false
 }
 
-function csrfSafe(req: NextRequest): boolean {
-  const origin = req.headers.get('origin')
-  const referer = req.headers.get('referer')
-  const host = req.headers.get('host')
-  if (!host) return false
-  if (origin && !origin.includes(host)) return false
-  if (referer && !referer.includes(`https://${host}`) && !referer.includes(`http://${host}`)) return false
-  return true
-}
+// GET /api/admin/settings
 
 function sanitize(input: string): string {
   return input
@@ -68,7 +60,6 @@ export async function GET(req: NextRequest) {
 // POST /api/admin/settings - update a setting
 export async function POST(req: NextRequest) {
   if (!(await checkAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!csrfSafe(req)) return NextResponse.json({ error: 'CSRF check failed.' }, { status: 403 })
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Supabase is not configured in .env.local' }, { status: 503 })

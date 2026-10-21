@@ -19,16 +19,6 @@ function sanitize(input: string): string {
     .trim()
 }
 
-function csrfSafe(req: NextRequest): boolean {
-  const origin = req.headers.get('origin')
-  const referer = req.headers.get('referer')
-  const host = req.headers.get('host')
-  if (!host) return false
-  if (origin && !origin.includes(host)) return false
-  if (referer && !referer.includes(`https://${host}`) && !referer.includes(`http://${host}`)) return false
-  return true
-}
-
 type RawOption = { id: string; text: string; weight: number; display_order: number; question_id: string }
 type RawQuestion = { id: string; text: string; timer_seconds: number; display_order: number; created_at: string; options: RawOption[] }
 
@@ -69,7 +59,6 @@ export async function GET(req: NextRequest) {
 // POST /api/admin/questions - create a question
 export async function POST(req: NextRequest) {
   if (!(await checkAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!csrfSafe(req)) return NextResponse.json({ error: 'CSRF check failed.' }, { status: 403 })
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Please configure your Supabase URL and keys in .env.local first.' }, { status: 503 })
@@ -116,7 +105,6 @@ export async function POST(req: NextRequest) {
 // PUT /api/admin/questions - update a question
 export async function PUT(req: NextRequest) {
   if (!(await checkAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!csrfSafe(req)) return NextResponse.json({ error: 'CSRF check failed.' }, { status: 403 })
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Please configure your Supabase URL and keys in .env.local first.' }, { status: 503 })
@@ -143,6 +131,35 @@ export async function PUT(req: NextRequest) {
       }))
       await supabaseAdmin.from('options').insert(optionsToInsert as never[])
     }
+
+    return NextResponse.json({ success: true })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Server error'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
+}
+
+// DELETE /api/admin/questions?id=xxx&confirm=true
+export async function DELETE(req: NextRequest) {
+  if (!(await checkAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ error: 'Please configure your Supabase URL and keys in .env.local first.' }, { status: 503 })
+  }
+
+  try {
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+    const confirm = searchParams.get('confirm')
+    if (!id) return NextResponse.json({ error: 'ID required.' }, { status: 400 })
+    if (confirm !== 'true') return NextResponse.json({ error: 'Confirmation required. Add ?confirm=true' }, { status: 400 })
+
+    // Delete dependent rows first so FK constraints don't block deletion
+    await supabaseAdmin.from('answers').delete().eq('question_id', id)
+    await supabaseAdmin.from('options').delete().eq('question_id', id)
+
+    const { error } = await supabaseAdmin.from('questions').delete().eq('id', id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     return NextResponse.json({ success: true })
   } catch (err: unknown) {

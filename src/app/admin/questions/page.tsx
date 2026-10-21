@@ -123,7 +123,7 @@ export default function QuestionsPage() {
     if (!confirm('Delete this question? This cannot be undone.')) return
     setDeletingId(id)
     try {
-      await fetch(`/api/admin/questions?id=${id}`, { method: 'DELETE' })
+      await fetch(`/api/admin/questions?id=${id}&confirm=true`, { method: 'DELETE' })
       await fetchQuestions()
     } catch {
       setError('Failed to delete question.')

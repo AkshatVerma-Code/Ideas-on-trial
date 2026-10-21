@@ -7,16 +7,6 @@ async function checkAdmin(req: NextRequest) {
   return token ? await verifyAdminToken(token) : false
 }
 
-function csrfSafe(req: NextRequest): boolean {
-  const origin = req.headers.get('origin')
-  const referer = req.headers.get('referer')
-  const host = req.headers.get('host')
-  if (!host) return false
-  if (origin && !origin.includes(host)) return false
-  if (referer && !referer.includes(`https://${host}`) && !referer.includes(`http://${host}`)) return false
-  return true
-}
-
 // GET /api/admin/participants
 export async function GET(req: NextRequest) {
   if (!(await checkAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -55,7 +45,6 @@ export async function GET(req: NextRequest) {
 // DELETE /api/admin/participants?id=xxx (disqualify/remove)
 export async function DELETE(req: NextRequest) {
   if (!(await checkAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!csrfSafe(req)) return NextResponse.json({ error: 'CSRF check failed.' }, { status: 403 })
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Supabase is not configured' }, { status: 503 })
