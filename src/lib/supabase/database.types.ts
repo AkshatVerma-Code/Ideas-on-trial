@@ -14,6 +14,11 @@ export interface Database {
         Insert: { key: string; value: string; updated_at?: string }
         Update: { key?: string; value?: string; updated_at?: string }
       }
+      registered_teams: {
+        Row: { id: string; team_name: string; team_name_normalized: string; created_at: string }
+        Insert: { id?: string; team_name: string; team_name_normalized: string; created_at?: string }
+        Update: { id?: string; team_name?: string; team_name_normalized?: string; created_at?: string }
+      }
       questions: {
         Row: {
           id: string
@@ -128,5 +133,6 @@ export type Option = Database['public']['Tables']['options']['Row']
 export type Participant = Database['public']['Tables']['participants']['Row']
 export type Answer = Database['public']['Tables']['answers']['Row']
 export type Setting = Database['public']['Tables']['settings']['Row']
+export type RegisteredTeam = Database['public']['Tables']['registered_teams']['Row']
 
 export type QuestionWithOptions = Question & { options: Option[] }

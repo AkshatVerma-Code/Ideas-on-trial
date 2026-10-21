@@ -31,6 +31,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Team name must be under 60 characters.' }, { status: 400 })
     }
 
+    // Check if team is registered/allowed to participate
+    const normalized = trimmed.toLowerCase().replace(/\s+/g, ' ')
+
+    const { data: allowedRaw } = await supabaseAdmin
+      .from('registered_teams')
+      .select('id')
+      .eq('team_name_normalized', normalized)
+      .single()
+
+    if (!allowedRaw) {
+      return NextResponse.json(
+        { error: 'Your team is not registered for this quiz. Please contact the admin.' },
+        { status: 403 }
+      )
+    }
+
     // Check quiz is open
     const { data: settingRaw } = await supabaseAdmin
       .from('settings')
@@ -42,8 +58,6 @@ export async function POST(req: NextRequest) {
     if (!setting || setting.value !== 'true') {
       return NextResponse.json({ error: 'The quiz is currently closed. Please wait for it to open.' }, { status: 403 })
     }
-
-    const normalized = trimmed.toLowerCase().replace(/\s+/g, ' ')
 
     // Check if team already participated
     const { data: existingRaw } = await supabaseAdmin

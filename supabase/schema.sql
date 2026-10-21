@@ -39,7 +39,31 @@ CREATE TABLE IF NOT EXISTS options (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Participants table
+-- Registered teams (only these teams can participate)
+CREATE TABLE IF NOT EXISTS registered_teams (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  team_name TEXT NOT NULL UNIQUE,
+  team_name_normalized TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Insert allowed teams
+INSERT INTO registered_teams (team_name, team_name_normalized) VALUES
+  ('TFS', 'tfs'),
+  ('Chaotic Coders', 'chaotic coders'),
+  ('smogOps', 'smogops'),
+  ('innovelle', 'innovelle'),
+  ('Sagestack', 'sagestack'),
+  ('Raj Gupta', 'raj gupta'),
+  ('JMD', 'jmd'),
+  ('Seedhe Maut', 'seedhe maut'),
+  ('Mario Bros', 'mario bros'),
+  ('Razers', 'razers'),
+  ('Mind over model', 'mind over model'),
+  ('Chole Bhature', 'chole bhature'),
+  ('Code Blood', 'code blood'),
+  ('Voltbridge', 'voltbridge')
+ON CONFLICT (team_name) DO NOTHING;
 CREATE TABLE IF NOT EXISTS participants (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   team_name TEXT NOT NULL UNIQUE,
@@ -90,11 +114,15 @@ ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE registered_teams ENABLE ROW LEVEL SECURITY;
 
 -- Public can read questions, options, settings (for quiz display)
 CREATE POLICY "Public read settings" ON settings FOR SELECT USING (true);
 CREATE POLICY "Public read questions" ON questions FOR SELECT USING (true);
 CREATE POLICY "Public read options" ON options FOR SELECT USING (true);
+
+-- Public can read registered teams (for registration validation)
+CREATE POLICY "Public read registered teams" ON registered_teams FOR SELECT USING (true);
 
 -- Participants can insert themselves
 CREATE POLICY "Public insert participants" ON participants FOR INSERT WITH CHECK (true);
